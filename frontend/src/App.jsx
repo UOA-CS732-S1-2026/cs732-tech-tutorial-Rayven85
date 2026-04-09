@@ -1,41 +1,55 @@
 /**
  * App — root component, manages global state.
- * App 根组件 —— 管理全局状态，协调所有子组件。
+ *
+ * Search is intentionally separated from API filters:
+ * - Course / priority / completed / sort_by → call the API
+ * - Search term → filter locally from already-loaded tasks (instant, no flicker)
+ *
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { ExternalLink } from "lucide-react";
 import {
   fetchTasks, fetchStats, fetchUpcoming,
-  createTask, toggleComplete, deleteTask,
+  createTask, toggleComplete, deleteTask, updateTask,
 } from "./api";
-import StatsCards from "./components/StatsCards";
-import FilterBar from "./components/FilterBar";
-import TaskList from "./components/TaskList";
+import StatsCards  from "./components/StatsCards";
+import FilterBar   from "./components/FilterBar";
+import TaskList    from "./components/TaskList";
 import AddTaskForm from "./components/AddTaskForm";
-import TaskModal from "./components/TaskModal";
+import TaskModal   from "./components/TaskModal";
 
-const EMPTY_FILTERS = {
-  search: "", course: "", priority: "", completed: "", sort_by: "",
-};
+// API-driven filters (each change triggers a fetch)
+const EMPTY_API_FILTERS = { course: "", priority: "", completed: "", sort_by: "" };
+
+// Local search filter — matches course code, title, or description
+function localSearch(tasks, term) {
+  if (!term.trim()) return tasks;
+  const kw = term.toLowerCase();
+  return tasks.filter((t) =>
+    t.course.toLowerCase().includes(kw) ||
+    t.title.toLowerCase().includes(kw) ||
+    (t.description && t.description.toLowerCase().includes(kw))
+  );
+}
 
 export default function App() {
-  const [tasks, setTasks] = useState([]);
-  const [upcoming, setUpcoming] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
-  const [selectedTask, setSelectedTask] = useState(null); // modal state / 弹窗状态
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [tasks,        setTasks]        = useState([]);
+  const [upcoming,     setUpcoming]     = useState([]);
+  const [stats,        setStats]        = useState(null);
+  const [apiFilters,   setApiFilters]   = useState(EMPTY_API_FILTERS);
+  const [searchTerm,   setSearchTerm]   = useState("");       // local search
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [error,        setError]        = useState("");
+  const [loading,      setLoading]      = useState(true);
 
-  useEffect(() => { loadAll(EMPTY_FILTERS); }, []);
+  useEffect(() => { loadAll(EMPTY_API_FILTERS); }, []);
 
-  async function loadAll(currentFilters) {
+  async function loadAll(filters) {
     setLoading(true);
     setError("");
     try {
-      // Parallel requests to FastAPI / 并行发出三个 FastAPI 请求
       const [taskData, statsData, upcomingData] = await Promise.all([
-        fetchTasks(currentFilters),
+        fetchTasks(filters),      // search param NOT passed — handled locally
         fetchStats(),
         fetchUpcoming(),
       ]);
@@ -49,46 +63,73 @@ export default function App() {
     }
   }
 
-  function handleFilterChange(newFilters) {
-    setFilters(newFilters);
+  // Only API filters trigger a fetch; search is purely local
+
+  function handleApiFilterChange(newFilters) {
+    setApiFilters(newFilters);
     loadAll(newFilters);
   }
 
+  // Apply local search on top of API results — no API call needed
+
+  const visibleTasks = useMemo(
+    () => localSearch(tasks, searchTerm),
+    [tasks, searchTerm]
+  );
+
   async function handleCreate(formData) {
     await createTask(formData);
-    await loadAll(filters);
+    await loadAll(apiFilters);
   }
 
   async function handleToggle(taskId, currentCompleted) {
-    await toggleComplete(taskId, !currentCompleted);
-    await loadAll(filters);
+    // Optimistic update
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === taskId
+          ? { ...t, completed: !currentCompleted, updated_at: new Date().toISOString() }
+          : t
+      )
+    );
+    try {
+      await toggleComplete(taskId, !currentCompleted);
+      const [statsData, upcomingData] = await Promise.all([fetchStats(), fetchUpcoming()]);
+      setStats(statsData);
+      setUpcoming(upcomingData);
+    } catch {
+      setTasks((prev) =>
+        prev.map((t) => t.id === taskId ? { ...t, completed: currentCompleted } : t)
+      );
+    }
+  }
+
+  async function handleUpdate(taskId, data) {
+    const updated = await updateTask(taskId, data);
+    setTasks((prev) => prev.map((t) => t.id === taskId ? updated : t));
+    if (selectedTask?.id === taskId) setSelectedTask(updated);
+    const [statsData, upcomingData] = await Promise.all([fetchStats(), fetchUpcoming()]);
+    setStats(statsData);
+    setUpcoming(upcomingData);
   }
 
   async function handleDelete(taskId) {
     await deleteTask(taskId);
-    if (selectedTask?.id === taskId) setSelectedTask(null); // close modal if deleted task was open
-    await loadAll(filters);
+    if (selectedTask?.id === taskId) setSelectedTask(null);
+    await loadAll(apiFilters);
   }
 
   const courses = stats?.courses ?? [];
 
   return (
     <div className="app">
-      {/* Header (3.B — light, matches page bg) / 轻色 Header，与页面背景色一致 */}
       <header className="app-header">
         <div className="header-inner">
           <div>
             <h1 className="app-title">Student Task Manager</h1>
             <p className="app-subtitle">FastAPI + React · COMPSCI732</p>
           </div>
-          <a
-            href="http://localhost:8000/docs"
-            target="_blank"
-            rel="noreferrer"
-            className="docs-link"
-          >
-            API Docs
-            <ExternalLink size={12} />
+          <a href="http://localhost:8000/docs" target="_blank" rel="noreferrer" className="docs-link">
+            API Docs <ExternalLink size={12} />
           </a>
         </div>
       </header>
@@ -96,7 +137,15 @@ export default function App() {
       <main className="app-main">
         <StatsCards stats={stats} />
         <AddTaskForm onSubmit={handleCreate} />
-        <FilterBar filters={filters} onChange={handleFilterChange} courses={courses} />
+
+        <FilterBar
+          apiFilters={apiFilters}
+          searchTerm={searchTerm}
+          onApiFilterChange={handleApiFilterChange}
+          onSearchChange={setSearchTerm}
+          courses={courses}
+          tasks={tasks}             // passed for local suggestion computation
+        />
 
         {error && <div className="error-banner">{error}</div>}
 
@@ -107,8 +156,9 @@ export default function App() {
           </div>
         ) : (
           <TaskList
-            tasks={tasks}
+            tasks={visibleTasks}   // locally filtered
             upcoming={upcoming}
+            sortBy={apiFilters.sort_by}
             onToggle={handleToggle}
             onDelete={handleDelete}
             onSelect={setSelectedTask}
@@ -116,9 +166,8 @@ export default function App() {
         )}
       </main>
 
-      {/* Task detail modal — shown when a card is clicked / 点击卡片后显示的详情弹窗 */}
       {selectedTask && (
-        <TaskModal task={selectedTask} onClose={() => setSelectedTask(null)} />
+        <TaskModal task={selectedTask} onClose={() => setSelectedTask(null)} onUpdate={handleUpdate} />
       )}
     </div>
   );

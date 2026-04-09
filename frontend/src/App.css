@@ -336,6 +336,101 @@ body {
 }
 .search-input:focus { outline: none; border-color: var(--accent); background: var(--surface); }
 .search-input::placeholder { color: var(--muted); }
+/* Extra right padding so text doesn't overlap the clear button / 留出清除按钮的空间 */
+.search-input:not(:placeholder-shown) { padding-right: 2rem; }
+
+/* Clear (X) button inside search box / 搜索框内清除按钮 */
+.search-clear {
+  position: absolute;
+  right: 0.6rem;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0.2rem;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.search-clear:hover { color: var(--dark); }
+
+/* Suggestions dropdown / 建议下拉列表 */
+.suggestion-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(53,45,46,0.12);
+  list-style: none;
+  z-index: 50;
+  overflow: hidden;
+  animation: dropIn 0.12s ease;
+}
+
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.suggestion-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.9rem;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: var(--dark);
+  transition: background 0.1s;
+  border-bottom: 1px solid var(--border);
+}
+.suggestion-item:last-child { border-bottom: none; }
+.suggestion-item:hover,
+.suggestion-active { background: var(--bg); }
+
+.suggestion-title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.suggestion-course {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.suggestion-hint {
+  font-size: 0.7rem;
+  color: var(--muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-style: italic;
+}
+
+/* Highlighted match text / 高亮匹配文字 */
+.suggestion-mark {
+  background: var(--pink-light);
+  color: #8b3a52;
+  border-radius: 2px;
+  padding: 0 1px;
+  font-style: normal;
+}
+
+/* No results hint / 无结果提示 */
+.suggestion-empty {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  z-index: 50;
+  font-style: italic;
+}
 
 .filter-controls {
   display: flex;
@@ -393,6 +488,17 @@ body {
 }
 
 .section-header.upcoming-header { color: var(--accent); }
+
+/* Completed section header — muted / 已完成区块标题，颜色稍淡 */
+.section-header-done { opacity: 0.65; }
+
+/* Empty pending message / 待完成为空时的提示 */
+.section-empty {
+  font-size: 0.8rem;
+  color: var(--muted);
+  padding: 0.65rem 0.25rem;
+  font-style: italic;
+}
 
 .section-count {
   background: var(--border);
@@ -476,6 +582,13 @@ body {
   color: var(--muted);
 }
 
+/* Course code prefix shown inline before the task title / 课程代码前缀，内联显示在标题前 */
+.task-course-prefix {
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.01em;
+}
+
 /* Meta items */
 .task-meta {
   display: flex;
@@ -507,6 +620,14 @@ body {
 .badge-high   { background: var(--pink-light);  color: #8b3a52; }
 .badge-medium { background: #ede8ee;            color: var(--accent); }
 .badge-low    { background: var(--bg);          color: var(--muted); border: 1px solid var(--border); }
+
+/* Upcoming highlight — subtle left border accent / 即将到期卡片：左侧加高亮色 */
+.upcoming-highlight {
+  border-left-color: var(--accent) !important;
+  background: linear-gradient(to right, #f5f2f7, var(--surface));
+}
+
+.meta-upcoming { color: var(--accent); }
 
 /* Due date colours */
 .due-overdue { color: #9b2a2a; font-weight: 600; }
@@ -564,6 +685,8 @@ body {
 
 /* =========================================================
    Task card — clickable cursor
+   Framer Motion handles all layout/slide animations via layoutId.
+   Framer Motion 通过 layoutId 处理所有滑动动画，CSS 不再手写。
    ========================================================= */
 .task-card { cursor: pointer; }
 
@@ -760,6 +883,121 @@ body {
   font-size: 0.72rem;
   color: var(--muted);
 }
+
+/* Modal header actions (edit + close buttons) */
+.modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.modal-edit-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.75rem;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.modal-edit-btn:hover {
+  background: var(--pink-light);
+  border-color: var(--pink);
+}
+
+/* Edit form inside modal */
+.modal-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.25rem 1.25rem 1.25rem;
+}
+
+.modal-edit-row {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.modal-edit-input,
+.modal-edit-select {
+  flex: 1;
+  padding: 0.5rem 0.7rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--dark);
+  font-size: 0.85rem;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+.modal-edit-input:focus,
+.modal-edit-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.modal-edit-textarea {
+  width: 100%;
+  padding: 0.5rem 0.7rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--dark);
+  font-size: 0.85rem;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color 0.15s;
+}
+.modal-edit-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.modal-edit-error {
+  font-size: 0.8rem;
+  color: #9b2a2a;
+}
+
+.modal-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding-top: 0.25rem;
+}
+
+.modal-edit-cancel {
+  padding: 0.45rem 1rem;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.modal-edit-cancel:hover { background: var(--bg); }
+
+.modal-edit-save {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 1.1rem;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.modal-edit-save:hover:not(:disabled) { opacity: 0.88; }
+.modal-edit-save:disabled { opacity: 0.55; cursor: not-allowed; }
 
 /* =========================================================
    Responsive

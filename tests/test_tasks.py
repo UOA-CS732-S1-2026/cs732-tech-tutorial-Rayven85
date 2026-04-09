@@ -1,9 +1,6 @@
 """
 Tests for the Student Task Manager API.
-任务管理 API 的测试文件。
 
-使用 FastAPI 内置的 TestClient（基于 httpx）来发送测试请求，
-无需真正启动服务器。每个测试函数运行前都会清空内存存储，确保测试隔离。
 """
 
 import pytest
@@ -12,12 +9,11 @@ from fastapi.testclient import TestClient
 from app.main import app
 import app.storage.in_memory as store
 
-# Create a test client from the FastAPI app / 从 FastAPI app 创建测试客户端
+# Create a test client from the FastAPI app
 client = TestClient(app, raise_server_exceptions=True)
 
 # ---------------------------------------------------------------------------
 # Helper — a valid task payload used across multiple tests
-# 辅助变量 —— 多个测试共用的合法任务请求体
 # ---------------------------------------------------------------------------
 VALID_TASK = {
     "title": "Test Assignment",
@@ -33,7 +29,6 @@ VALID_TASK = {
 def reset_store():
     """
     Clear the in-memory store before each test.
-    每个测试前清空存储，保证测试之间互不干扰。
     """
     store.clear()
     yield
@@ -41,7 +36,7 @@ def reset_store():
 
 
 # ---------------------------------------------------------------------------
-# Test: Health check / 健康检查
+# Test: Health check
 # ---------------------------------------------------------------------------
 def test_health_check():
     response = client.get("/")
@@ -50,7 +45,7 @@ def test_health_check():
 
 
 # ---------------------------------------------------------------------------
-# Test: Create task (POST /tasks/) / 创建任务
+# Test: Create task (POST /tasks/)
 # ---------------------------------------------------------------------------
 def test_create_task_success():
     """Creating a task with valid data should return 201 and the full task object."""
@@ -62,7 +57,7 @@ def test_create_task_success():
     assert body["course"] == "COMPSCI732"
     assert body["priority"] == "high"
     assert body["completed"] is False
-    # Server should have generated id and timestamps / 服务端应自动生成 id 和时间戳
+    # Server should have generated id and timestamps
     assert "id" in body
     assert "created_at" in body
     assert "updated_at" in body
@@ -70,7 +65,6 @@ def test_create_task_success():
 
 def test_create_task_missing_required_field():
     """Omitting a required field (course) should return 422 Unprocessable Entity."""
-    # 缺少必填字段 course，FastAPI 应返回 422 验证错误
     bad_payload = {k: v for k, v in VALID_TASK.items() if k != "course"}
     response = client.post("/tasks/", json=bad_payload)
     assert response.status_code == 422
@@ -78,7 +72,6 @@ def test_create_task_missing_required_field():
 
 def test_create_task_invalid_priority():
     """Sending an invalid priority value should return 422."""
-    # 发送非法的 priority 值，应触发 Pydantic 验证错误
     bad_payload = {**VALID_TASK, "priority": "urgent"}
     response = client.post("/tasks/", json=bad_payload)
     assert response.status_code == 422
@@ -86,14 +79,13 @@ def test_create_task_invalid_priority():
 
 def test_create_task_empty_title():
     """An empty title should fail validation (min_length=1)."""
-    # 空标题应触发 min_length 验证失败
     bad_payload = {**VALID_TASK, "title": ""}
     response = client.post("/tasks/", json=bad_payload)
     assert response.status_code == 422
 
 
 # ---------------------------------------------------------------------------
-# Test: List tasks (GET /tasks/) / 列出任务
+# Test: List tasks (GET /tasks/)
 # ---------------------------------------------------------------------------
 def test_list_tasks_empty():
     """When no tasks exist, the list should be empty."""
@@ -114,7 +106,6 @@ def test_list_tasks_returns_created_tasks():
 
 def test_list_tasks_filter_by_course():
     """Filter by course should only return matching tasks."""
-    # 创建两门课的任务，按课程过滤只应返回对应课程的任务
     client.post("/tasks/", json=VALID_TASK)  # COMPSCI732
     client.post("/tasks/", json={**VALID_TASK, "course": "SOFTENG750"})
 
@@ -137,7 +128,7 @@ def test_list_tasks_filter_by_completed():
 
 
 # ---------------------------------------------------------------------------
-# Test: Get single task (GET /tasks/{id}) / 获取单个任务
+# Test: Get single task (GET /tasks/{id})
 # ---------------------------------------------------------------------------
 def test_get_task_success():
     """Getting a task by a valid ID should return 200 with the task."""
@@ -151,13 +142,12 @@ def test_get_task_success():
 
 def test_get_task_not_found():
     """Requesting a non-existent task ID should return 404."""
-    # 请求不存在的 ID 应返回 404
     response = client.get("/tasks/nonexistent-id")
     assert response.status_code == 404
 
 
 # ---------------------------------------------------------------------------
-# Test: Update task (PUT /tasks/{id}) / 更新任务
+# Test: Update task (PUT /tasks/{id})
 # ---------------------------------------------------------------------------
 def test_update_task_success():
     """Updating a task's title and completed status should reflect in the response."""
@@ -171,7 +161,7 @@ def test_update_task_success():
     body = response.json()
     assert body["title"] == "Updated Title"
     assert body["completed"] is True
-    # Fields not in update payload should remain unchanged / 未传入的字段保持不变
+    # Fields not in update payload should remain unchanged
     assert body["course"] == VALID_TASK["course"]
 
 
@@ -182,7 +172,7 @@ def test_update_task_not_found():
 
 
 # ---------------------------------------------------------------------------
-# Test: Delete task (DELETE /tasks/{id}) / 删除任务
+# Test: Delete task (DELETE /tasks/{id})
 # ---------------------------------------------------------------------------
 def test_delete_task_success():
     """Deleting a task should return 204 and the task should no longer exist."""
@@ -192,7 +182,7 @@ def test_delete_task_success():
     delete_resp = client.delete(f"/tasks/{task_id}")
     assert delete_resp.status_code == 204
 
-    # Confirm it is gone / 确认任务已被删除
+    # Confirm it is gone
     get_resp = client.get(f"/tasks/{task_id}")
     assert get_resp.status_code == 404
 
@@ -204,7 +194,7 @@ def test_delete_task_not_found():
 
 
 # ---------------------------------------------------------------------------
-# Test: Stats endpoint (GET /tasks/stats) / 统计端点
+# Test: Stats endpoint (GET /tasks/stats)
 # ---------------------------------------------------------------------------
 def test_get_stats_empty():
     """Stats with no tasks should show all zeros."""

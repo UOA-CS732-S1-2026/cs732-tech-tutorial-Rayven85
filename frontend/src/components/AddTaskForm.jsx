@@ -1,6 +1,5 @@
 /**
  * AddTaskForm — collapsible form for creating a new task.
- * 可折叠的创建任务表单组件。
  */
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
@@ -60,19 +59,19 @@ export default function AddTaskForm({ onSubmit }) {
         <form className="add-task-form" onSubmit={handleSubmit}>
           <div className="form-row">
             <input
-              name="title"
-              value={form.title}
-              onChange={handleChange}
-              placeholder="Task title *"
-              maxLength={200}
-              className="form-input"
-            />
-            <input
               name="course"
               value={form.course}
               onChange={handleChange}
               placeholder="Course code * (e.g. COMPSCI732)"
               maxLength={50}
+              className="form-input"
+            />
+            <input
+              name="title"
+              value={form.title}
+              onChange={handleChange}
+              placeholder="Task title *"
+              maxLength={200}
               className="form-input"
             />
           </div>

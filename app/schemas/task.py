@@ -1,11 +1,6 @@
 """
 Pydantic schemas for request validation and response serialisation.
-Pydantic schema 定义 —— 用于 API 请求的参数验证和响应序列化。
 
-FastAPI 使用这些 schema 来：
-1. 自动验证请求体（POST/PUT）
-2. 生成 /docs 的交互式文档
-3. 序列化 JSON 响应
 """
 
 from datetime import date, datetime
@@ -17,8 +12,6 @@ from pydantic import BaseModel, ConfigDict, Field
 class TaskCreate(BaseModel):
     """
     Schema for creating a new task (POST /tasks).
-    创建新任务时使用的请求体 schema。
-    客户端提交这些字段，id 和时间戳由服务端自动生成。
     """
 
     title: str = Field(
@@ -60,8 +53,6 @@ class TaskCreate(BaseModel):
 class TaskUpdate(BaseModel):
     """
     Schema for updating an existing task (PUT /tasks/{task_id}).
-    更新任务时使用的请求体 schema。
-    所有字段都是可选的，只需传入想要修改的字段（部分更新）。
     """
 
     title: Optional[str] = Field(default=None, min_length=1, max_length=200)
@@ -75,11 +66,9 @@ class TaskUpdate(BaseModel):
 class TaskResponse(BaseModel):
     """
     Schema for task responses returned to the client.
-    返回给客户端的任务响应 schema，包含所有字段（含 id 和时间戳）。
     """
 
     # Allow building from plain objects (not just dicts)
-    # 允许从非字典对象（如内部 Task 类实例）构建此 schema
     model_config = ConfigDict(from_attributes=True)
 
     id: str

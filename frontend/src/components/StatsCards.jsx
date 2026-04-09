@@ -1,6 +1,5 @@
 /**
  * StatsCards — summary statistics from GET /tasks/stats.
- * 统计卡片组件 —— 展示来自 GET /tasks/stats 的摘要数据。
  */
 import { CheckCircle2, Circle, ListTodo, TrendingUp, Flag } from "lucide-react";
 
@@ -34,7 +33,7 @@ export default function StatsCards({ stats }) {
         </div>
       </div>
 
-      {/* Progress bar / 完成进度条 */}
+      {/* Progress bar */}
       <div className="progress-wrap">
         <div className="progress-track">
           <div className="progress-fill" style={{ width: `${pct}%` }} />
@@ -42,7 +41,7 @@ export default function StatsCards({ stats }) {
         <span className="progress-label">{pct}% complete</span>
       </div>
 
-      {/* Priority breakdown / 优先级分布 */}
+      {/* Priority breakdown */}
       <div className="priority-row">
         <span className="priority-row-label">
           <Flag size={11} style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }} />
