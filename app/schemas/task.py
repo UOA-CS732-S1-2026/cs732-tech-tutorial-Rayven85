@@ -1,6 +1,5 @@
 """
 Pydantic schemas for request validation and response serialisation.
-
 """
 
 from datetime import date, datetime
@@ -72,9 +71,9 @@ class TaskResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
+    course: str
     title: str
     description: Optional[str]
-    course: str
     due_date: date
     priority: Literal["low", "medium", "high"]
     completed: bool
